@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>For You</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Dancing+Script:wght@500;700&family=EB+Garamond:ital@0;1&display=swap" rel="stylesheet">
+<style>
+/* ===================== TOKENS ===================== */
+:root{
+  --night:#0c0709;
+  --burgundy:#2b0f16;
+  --burgundy-2:#4a1620;
+  --gold:#d8a752;
+  --gold-bright:#f3cd82;
+  --rose:#a83d4c;
+  --rose-deep:#6e1f2b;
+  --cream:#f6ead9;
+  --cream-dim:#e7d7bd;
+  --ink:#3a2418;
+  --display:'Playfair Display', serif;
+  --script:'Dancing Script', cursive;
+  --body:'Cormorant Garamond', serif;
+  --paper-body:'EB Garamond', serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--night);
+  color:var(--cream);
+  font-family:var(--body);
+  overflow-x:hidden;
+  cursor:default;
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important;}
+}
+h1,h2,h3{font-family:var(--display); font-weight:600; margin:0;}
+::selection{background:var(--gold); color:var(--night);}
+
+/* ===================== SHARED ===================== */
+.scene{
+  position:relative;
+  min-height:100vh;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  padding:6vh 5vw;
+}
+canvas.bg-canvas{position:absolute; inset:0; width:100%; height:100%; pointer-events:none;}
+.eyebrow{
+  font-family:var(--script);
+  color:var(--gold-bright);
+  font-size:clamp(1.1rem,2vw,1.6rem);
+  letter-spacing:.04em;
+  opacity:.9;
+}
+.scroll-cue{
+  position:absolute;
+  bottom:4vh;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  color:var(--gold);
+  opacity:.7;
+  font-family:var(--body);
+  font-size:.85rem;
+  letter-spacing:.25em;
+  text-transform:uppercase;
+  animation:cueFloat 2.4s ease-in-out infinite;
+  z-index:5;
+}
+.scroll-cue span.chevron{
+  width:10px; height:10px;
+  border-right:1.5px solid var(--gold);
+  border-bottom:1.5px solid var(--gold);
+  transform:rotate(45deg);
+}
+@keyframes cueFloat{0%,100%{transform:translate(-50%,0);}50%{transform:translate(-50%,10px);}}
+
+.reveal{opacity:0; transform:translateY(40px); transition:opacity 1.4s ease, transform 1.4s ease;}
+.reveal.in-view{opacity:1; transform:translateY(0);}
+
+/* ===================== INTRO OVERLAY (SCENE 1) ===================== */
+#intro-overlay{
+  position:fixed; inset:0; z-index:1000;
+  background:radial-gradient(ellipse at 50% 40%, #180a0d 0%, #0a0506 70%, #050303 100%);
+  display:flex; align-items:center; justify-content:center;
+  transition:opacity 1.8s ease;
+}
+#intro-overlay.hide{opacity:0; pointer-events:none;}
+#intro-text-wrap{
+  position:relative; z-index:3; text-align:center; padding:0 6vw;
+}
+.intro-line{
+  font-family:var(--display);
+  font-style:italic;
+  font-weight:500;
+  font-size:clamp(1.4rem, 4vw, 2.6rem);
+  color:var(--cream);
+  opacity:0;
+  letter-spacing:.02em;
+  text-shadow:0 0 30px rgba(216,167,82,.35);
+  position:absolute;
+  left:50%; top:50%;
+  transform:translate(-50%,-50%);
+  width:100%;
+}
+.intro-line.active{animation:introFade 3.6s ease forwards;}
+@keyframes introFade{
+  0%{opacity:0; letter-spacing:.3em; filter:blur(6px);}
+  18%{opacity:1; letter-spacing:.02em; filter:blur(0);}
+  78%{opacity:1;}
+  100%{opacity:0; filter:blur(4px);}
+}
+#skip-intro{
+  position:absolute; bottom:6vh; right:6vw; z-index:5;
+  background:transparent; border:1px solid rgba(216,167,82,.4);
+  color:var(--gold); font-family:var(--body); letter-spacing:.15em;
+  text-transform:uppercase; font-size:.75rem; padding:10px 18px;
+  border-radius:30px; cursor:pointer; transition:all .3s ease;
+}
+#skip-intro:hover{background:rgba(216,167,82,.15); border-color:var(--gold-bright);}
+
+/* ===================== SCENE 2 — BOUQUET ===================== */
+#scene2{
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 20%, rgba(216,167,82,.14), transparent 60%),
+    linear-gradient(180deg, #150a0c 0%, #241014 45%, #180a0d 100%);
+}
+#scene2 h2{
+  font-size:clamp(1.6rem,3.6vw,2.6rem);
+  color:var(--cream);
+  text-align:center;
+  margin-bottom:2vh;
+  text-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+.bouquet-stage{
+  position:relative;
+  width:min(760px,90vw);
+  height:min(560px,62vh);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+}
+#bouquet-group{
+  position:absolute;
+  left:2%;
+  bottom:0;
+  width:100%;
+  height:100%;
+  transform-origin:50% 90%;
+  animation:bouquetSway 6s ease-in-out infinite;
+  cursor:pointer;
+  transition:transform 1.4s cubic-bezier(.2,.8,.2,1), filter 1.4s ease;
+}
+#bouquet-group.accepted{
+  transform:translate(0,-8vh) scale(1.4) !important;
+  filter:drop-shadow(0 0 60px rgba(243,205,130,.9));
+}
+@keyframes bouquetSway{
+  0%,100%{transform:rotate(-1.4deg);}
+  50%{transform:rotate(1.6deg);}
+}
+.hand-hint{
+  position:absolute; top:8px; left:8px;
+  font-size:.75rem; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--gold-bright); opacity:.85; font-family:var(--body);
+  animation:cueFloat 2.4s ease-in-out infinite;
+}
+.petal-burst{position:absolute; inset:0; pointer-events:none; z-index:20;}
+
+/* balloons are generated dynamically by JS so we can have many, all unique */
+.sorry-balloon{
+  position:absolute;
+  top:-22%;
+  z-index:8;
+  pointer-events:none;
+  filter:drop-shadow(0 10px 18px rgba(0,0,0,.4));
+}
+
+/* ===================== SCENE 3 — PHOTO REVEAL ===================== */
+#scene3{
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 30%, rgba(216,167,82,.12), transparent 65%),
+    linear-gradient(180deg,#140a0c 0%, #1d0d10 60%, #140a0c 100%);
+}
+.frame-wrap{
+  position:relative;
+  width:min(360px,72vw);
+  aspect-ratio:3/4;
+  display:flex; align-items:center; justify-content:center;
+}
+.rays{
+  position:absolute; inset:-60%; z-index:0;
+  background:conic-gradient(from 0deg, rgba(243,205,130,.18)0deg, transparent 20deg, rgba(243,205,130,.12) 40deg, transparent 60deg, rgba(243,205,130,.16) 90deg, transparent 120deg, rgba(243,205,130,.1) 160deg, transparent 200deg, rgba(243,205,130,.15) 260deg, transparent 320deg, rgba(243,205,130,.18) 360deg);
+  animation:rayspin 40s linear infinite;
+  filter:blur(2px);
+  opacity:.8;
+}
+@keyframes rayspin{to{transform:rotate(360deg);}}
+.photo-frame{
+  position:relative; z-index:2;
+  width:100%; height:100%;
+  padding:14px;
+  background:linear-gradient(155deg,#e9c47c,#a9762f 40%,#f3d896 60%,#8a611f);
+  border-radius:6px;
+  box-shadow:0 20px 60px rgba(0,0,0,.6), inset 0 0 0 2px rgba(255,255,255,.25);
+  animation:frameFloat 6s ease-in-out infinite;
+}
+@keyframes frameFloat{0%,100%{transform:translateY(0px);}50%{transform:translateY(-12px);}}
+.photo-inner{
+  width:100%; height:100%;
+  border-radius:2px;
+  overflow:hidden;
+  background:#1a1a1a;
+  box-shadow:inset 0 0 30px rgba(0,0,0,.6);
+}
+.photo-inner img{width:100%; height:100%; object-fit:cover; display:block;}
+.photo-caption{
+  margin-top:4vh;
+  font-family:var(--script);
+  font-size:clamp(1.4rem,3vw,2rem);
+  color:var(--gold-bright);
+  text-align:center;
+  text-shadow:0 0 20px rgba(216,167,82,.4);
+}
+.mini-hearts{position:absolute; inset:0; pointer-events:none; z-index:3;}
+
+/* ===================== SCENE 4 — VINTAGE LETTER ===================== */
+#scene4{
+  background:
+    radial-gradient(ellipse 60% 50% at 30% 20%, rgba(255,180,90,.10), transparent 60%),
+    linear-gradient(180deg,#1c130d 0%, #120a08 55%, #180f0c 100%);
+}
+.desk{
+  position:relative;
+  width:min(900px,94vw);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4vw;
+  flex-wrap:wrap;
+}
+.envelope{
+  width:min(220px,60vw);
+  aspect-ratio:3/2;
+  position:relative;
+  background:linear-gradient(160deg,#d9c39c,#c3a877 60%,#a98c5c);
+  border-radius:4px;
+  box-shadow:0 18px 40px rgba(0,0,0,.55);
+  transform:rotate(-8deg);
+  flex-shrink:0;
+}
+.envelope::before{
+  content:"";
+  position:absolute; inset:0;
+  background:linear-gradient(135deg, transparent 49%, rgba(0,0,0,.18) 50%, transparent 51%),
+             linear-gradient(-135deg, transparent 49%, rgba(0,0,0,.18) 50%, transparent 51%);
+}
+.envelope .seal-mini{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:34px; height:34px; border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, #c14a4a, #7c1f24 70%);
+  box-shadow:0 3px 8px rgba(0,0,0,.5);
+  cursor:pointer;
+  transition:transform .4s cubic-bezier(.34,1.56,.64,1), opacity .5s ease, box-shadow .3s ease;
+  z-index:6;
+}
+.envelope .seal-mini:hover{
+  transform:translate(-50%,-50%) scale(1.08);
+  box-shadow:0 4px 12px rgba(0,0,0,.6);
+}
+.envelope .seal-mini.broken{
+  transform:translate(-50%,-50%) scale(.3) rotate(35deg);
+  opacity:0;
+}
+.envelope{cursor:pointer;}
+.feather{
+  position:absolute;
+  right:-30px; bottom:-18px;
+  width:90px; opacity:.9;
+  transform:rotate(35deg);
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.4));
+}
+.dried-flower{
+  position:absolute;
+  left:-24px; top:-10px;
+  width:60px;
+  opacity:.9;
+  transform:rotate(-20deg);
+}
+
+.letter-paper{
+  position:relative;
+  width:min(460px,86vw);
+  min-height:560px;
+  padding:50px 42px 40px;
+  background:
+    radial-gradient(circle at 18% 30%, rgba(120,80,40,.18) 0%, transparent 10%),
+    radial-gradient(circle at 75% 68%, rgba(120,80,40,.14) 0%, transparent 12%),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.015) 0px, transparent 2px, transparent 4px),
+    linear-gradient(170deg,#f3e6c5 0%, #ecdcae 40%, #f1e3bf 70%, #e6d3a4 100%);
+  border-radius:2px;
+  box-shadow:
+    0 30px 70px rgba(0,0,0,.55),
+    inset 0 0 60px rgba(120,80,30,.25),
+    inset 0 0 120px rgba(0,0,0,.15);
+  color:var(--ink);
+  transform-origin:top center;
+  transition:opacity .9s cubic-bezier(.16,.84,.44,1), transform .95s cubic-bezier(.16,.84,.44,1);
+}
+.letter-paper.folded{
+  opacity:0;
+  transform:scaleY(.04) translateY(24px);
+  pointer-events:none;
+  animation:none;
+}
+.letter-paper.open{
+  opacity:1;
+  transform:scaleY(1) translateY(0);
+  animation:letterFloat 7s ease-in-out infinite;
+  animation-delay:1s;
+}
+@keyframes letterFloat{0%,100%{transform:translateY(0) rotate(.4deg);}50%{transform:translateY(-8px) rotate(-.3deg);}}
+.letter-paper::before{
+  content:"";
+  position:absolute; inset:0;
+  border-radius:2px;
+  pointer-events:none;
+  background:
+    radial-gradient(ellipse at top left, rgba(70,40,15,.55), transparent 22%),
+    radial-gradient(ellipse at top right, rgba(70,40,15,.5), transparent 22%),
+    radial-gradient(ellipse at bottom left, rgba(70,40,15,.55), transparent 22%),
+    radial-gradient(ellipse at bottom right, rgba(70,40,15,.55), transparent 22%);
+  mix-blend-mode:multiply;
+}
+.letter-paper::after{
+  content:"";
+  position:absolute; inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(to bottom, transparent calc(33% - .5px), rgba(0,0,0,.07) 33%, transparent calc(33% + .5px)),
+    linear-gradient(to bottom, transparent calc(66% - .5px), rgba(0,0,0,.07) 66%, transparent calc(66% + .5px));
+}
+.coffee-stain{
+  position:absolute;
+  width:70px; height:70px;
+  border-radius:50%;
+  border:3px solid rgba(120,72,30,.28);
+  box-shadow:inset 0 0 12px rgba(120,72,30,.2);
+  pointer-events:none;
+}
+.coffee-stain.one{top:14px; right:20px; transform:rotate(8deg) scale(1.1,.9);}
+.coffee-stain.two{bottom:40px; left:-14px; width:40px; height:40px; opacity:.7;}
+.gold-border{
+  position:absolute; inset:14px;
+  border:1px solid rgba(180,130,50,.55);
+  pointer-events:none;
+}
+.gold-border::before{
+  content:"";
+  position:absolute; inset:5px;
+  border:1px solid rgba(180,130,50,.3);
+}
+.corner{
+  position:absolute; width:46px; height:46px; opacity:.75; pointer-events:none;
+}
+.corner.tl{top:8px; left:8px;}
+.corner.tr{top:8px; right:8px; transform:scaleX(-1);}
+.corner.bl{bottom:8px; left:8px; transform:scaleY(-1);}
+.corner.br{bottom:8px; right:8px; transform:scale(-1,-1);}
+.seal-open{
+  position:absolute; top:-18px; left:50%; transform:translateX(-50%) rotate(-4deg);
+  width:56px; height:56px;
+  z-index:4;
+}
+.letter-heading{
+  font-family:var(--script);
+  font-size:clamp(1.8rem,4vw,2.4rem);
+  text-align:center;
+  color:var(--rose-deep);
+  margin-bottom:28px;
+  position:relative; z-index:2;
+}
+.letter-lines{
+  position:relative; z-index:2;
+  min-height:340px;
+  background-image:repeating-linear-gradient(to bottom, transparent 0, transparent 37px, rgba(80,50,20,.18) 38px);
+  background-position:0 4px;
+  font-family:var(--paper-body);
+  font-size:clamp(1.02rem,2.3vw,1.2rem);
+  line-height:37px;
+  color:var(--ink);
+}
+.letter-lines p{
+  margin:0;
+}
+.letter-lines .signoff{
+  font-family:var(--script);
+  font-size:clamp(1.3rem,3vw,1.7rem);
+  color:var(--rose-deep);
+  line-height:44px;
+}
+.candle-glow{
+  position:absolute; z-index:0;
+  width:260px; height:260px;
+  bottom:-40px; right:-60px;
+  background:radial-gradient(circle, rgba(255,190,110,.35), transparent 65%);
+  filter:blur(6px);
+  pointer-events:none;
+  animation:flicker 3s ease-in-out infinite;
+}
+@keyframes flicker{0%,100%{opacity:.7;}45%{opacity:1;}55%{opacity:.6;}}
+
+/* ===================== SCENE 5 — ENDING ===================== */
+#scene5{
+  background:radial-gradient(ellipse 80% 70% at 50% 40%, #1a0c10 0%, #0a0507 70%, #050303 100%);
+  min-height:100vh;
+}
+.ending-text{
+  position:relative; z-index:4; text-align:center;
+}
+.ending-line1{
+  font-family:var(--display); font-style:italic; font-weight:500;
+  font-size:clamp(1.8rem,5vw,3.2rem);
+  color:var(--cream);
+  text-shadow:0 0 40px rgba(216,167,82,.4);
+  margin-bottom:26px;
+}
+.ending-line2{
+  font-family:var(--script);
+  font-size:clamp(1.6rem,4vw,2.4rem);
+  color:var(--gold-bright);
+  text-shadow:0 0 30px rgba(243,205,130,.5);
+}
+
+.petal{
+  position:absolute; top:-5%;
+  width:14px; height:14px;
+  border-radius:0 100% 0 100%;
+  background:linear-gradient(135deg,#c9445a,#7c1f2b);
+  opacity:.85;
+  pointer-events:none;
+  z-index:6;
+}
+.firefly{
+  position:absolute;
+  width:4px; height:4px;
+  border-radius:50%;
+  background:var(--gold-bright);
+  box-shadow:0 0 8px 3px rgba(243,205,130,.7);
+  pointer-events:none;
+}
+.star{
+  position:absolute;
+  width:2px; height:2px;
+  background:#fff;
+  border-radius:50%;
+  opacity:.6;
+}
+
+footer{
+  text-align:center;
+  padding:6vh 0 8vh;
+  font-family:var(--script);
+  color:var(--gold);
+  opacity:.6;
+  font-size:1rem;
+}
+</style>
+</head>
+<body>
+
+<!-- ============ SCENE 1: CINEMATIC INTRO ============ -->
+<div id="intro-overlay">
+  <canvas class="bg-canvas" id="introCanvas"></canvas>
+  <div id="intro-text-wrap">
+    <div class="intro-line" data-line="1">I know I hurt your heart&hellip;</div>
+    <div class="intro-line" data-line="2">I only wish to make you smile again.</div>
+  </div>
+  <button id="skip-intro" aria-label="Skip intro">Skip &rarr;</button>
+</div>
+
+<!-- ============ SCENE 2: BOUQUET ============ -->
+<section class="scene" id="scene2">
+  <canvas class="bg-canvas" id="sparkleCanvas"></canvas>
+  <p class="eyebrow reveal">a gift, from my heart</p>
+  <h2 class="reveal">Every petal is a quiet apology.</h2>
+
+  <div class="bouquet-stage reveal">
+    <div id="bouquet-group" aria-label="Click to accept the bouquet" role="button" tabindex="0">
+      <span class="hand-hint">tap the bouquet</span>
+      <svg viewBox="0 0 700 560" width="100%" height="100%" style="overflow:visible;">
+        <defs>
+          <radialGradient id="sunPetal" cx="50%" cy="35%" r="70%">
+            <stop offset="0%" stop-color="#ffe08a"/>
+            <stop offset="60%" stop-color="#f4b942"/>
+            <stop offset="100%" stop-color="#c8811c"/>
+          </radialGradient>
+          <radialGradient id="sunCenter" cx="45%" cy="35%" r="65%">
+            <stop offset="0%" stop-color="#6b4720"/>
+            <stop offset="100%" stop-color="#3a2612"/>
+          </radialGradient>
+          <radialGradient id="redRose" cx="42%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#e2536b"/>
+            <stop offset="55%" stop-color="#a8283e"/>
+            <stop offset="100%" stop-color="#5c1220"/>
+          </radialGradient>
+          <radialGradient id="whiteRose" cx="42%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="60%" stop-color="#f0e6da"/>
+            <stop offset="100%" stop-color="#cbb89e"/>
+          </radialGradient>
+          <radialGradient id="lily" cx="50%" cy="30%" r="75%">
+            <stop offset="0%" stop-color="#fffdf7"/>
+            <stop offset="70%" stop-color="#f4ecd8"/>
+            <stop offset="100%" stop-color="#d8c8a2"/>
+          </radialGradient>
+          <linearGradient id="leaf" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#7fa15c"/>
+            <stop offset="100%" stop-color="#38562c"/>
+          </linearGradient>
+          <linearGradient id="wrap" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#f4ecd9"/>
+            <stop offset="60%" stop-color="#e3d3ab"/>
+            <stop offset="100%" stop-color="#c9ab6e"/>
+          </linearGradient>
+          <linearGradient id="wrapDark" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2b2320"/>
+            <stop offset="100%" stop-color="#0e0c0b"/>
+          </linearGradient>
+          <linearGradient id="ribbon" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#f6d98a"/>
+            <stop offset="50%" stop-color="#c9922f"/>
+            <stop offset="100%" stop-color="#f6d98a"/>
+          </linearGradient>
+          <radialGradient id="daisyPetal" cx="50%" cy="20%" r="90%">
+            <stop offset="0%" stop-color="#ffffff"/>
+            <stop offset="75%" stop-color="#f7f4ec"/>
+            <stop offset="100%" stop-color="#ddd6c4"/>
+          </radialGradient>
+          <radialGradient id="daisyCenter" cx="40%" cy="35%" r="65%">
+            <stop offset="0%" stop-color="#ffe58a"/>
+            <stop offset="100%" stop-color="#d9a12a"/>
+          </radialGradient>
+        </defs>
+
+        <!-- ===== STEMS ===== -->
+        <g id="stems" stroke="#4a6b34" stroke-width="6" fill="none" stroke-linecap="round">
+          <path d="M 330,480 Q 300,380 260,300"/>
+          <path d="M 340,480 Q 330,370 330,270"/>
+          <path d="M 350,480 Q 370,380 410,300"/>
+          <path d="M 320,480 Q 260,400 200,340"/>
+          <path d="M 360,480 Q 420,400 470,330"/>
+        </g>
+
+        <!-- ===== EUCALYPTUS LEAVES ===== -->
+        <g id="leaves-back">
+          <ellipse cx="185" cy="330" rx="26" ry="14" fill="url(#leaf)" transform="rotate(-35 185 330)"/>
+          <ellipse cx="210" cy="300" rx="22" ry="12" fill="url(#leaf)" transform="rotate(-20 210 300)"/>
+          <ellipse cx="500" cy="320" rx="26" ry="14" fill="url(#leaf)" transform="rotate(35 500 320)"/>
+          <ellipse cx="475" cy="290" rx="22" ry="12" fill="url(#leaf)" transform="rotate(20 475 290)"/>
+          <ellipse cx="245" cy="255" rx="18" ry="10" fill="url(#leaf)" transform="rotate(-10 245 255)"/>
+          <ellipse cx="425" cy="250" rx="18" ry="10" fill="url(#leaf)" transform="rotate(10 425 250)"/>
+        </g>
+
+        <!-- ===== BABY'S BREATH ===== -->
+        <g id="babys-breath" fill="#f5f2e9">
+          <circle cx="240" cy="230" r="4"/><circle cx="255" cy="220" r="3.5"/><circle cx="228" cy="245" r="3"/>
+          <circle cx="440" cy="225" r="4"/><circle cx="425" cy="215" r="3.5"/><circle cx="452" cy="240" r="3"/>
+          <circle cx="300" cy="200" r="3.5"/><circle cx="380" cy="198" r="3.5"/>
+          <circle cx="340" cy="185" r="3"/><circle cx="260" cy="270" r="3"/><circle cx="420" cy="268" r="3"/>
+        </g>
+
+        <!-- ===== DAISIES ===== -->
+        <g id="daisies">
+          <g transform="translate(233,318) rotate(-8) scale(.85)">
+            <g fill="url(#daisyPetal)">
+              <ellipse cx="0" cy="-20" rx="6" ry="14"/>
+              <ellipse cx="14" cy="-14" rx="6" ry="14" transform="rotate(45 14 -14)"/>
+              <ellipse cx="20" cy="0" rx="6" ry="14" transform="rotate(90 20 0)"/>
+              <ellipse cx="14" cy="14" rx="6" ry="14" transform="rotate(135 14 14)"/>
+              <ellipse cx="0" cy="20" rx="6" ry="14" transform="rotate(180 0 20)"/>
+              <ellipse cx="-14" cy="14" rx="6" ry="14" transform="rotate(-135 -14 14)"/>
+              <ellipse cx="-20" cy="0" rx="6" ry="14" transform="rotate(-90 -20 0)"/>
+              <ellipse cx="-14" cy="-14" rx="6" ry="14" transform="rotate(-45 -14 -14)"/>
+            </g>
+            <circle r="9" fill="url(#daisyCenter)"/>
+          </g>
+          <g transform="translate(447,330) rotate(10) scale(.8)">
+            <g fill="url(#daisyPetal)">
+              <ellipse cx="0" cy="-20" rx="6" ry="14"/>
+              <ellipse cx="14" cy="-14" rx="6" ry="14" transform="rotate(45 14 -14)"/>
+              <ellipse cx="20" cy="0" rx="6" ry="14" transform="rotate(90 20 0)"/>
+              <ellipse cx="14" cy="14" rx="6" ry="14" transform="rotate(135 14 14)"/>
+              <ellipse cx="0" cy="20" rx="6" ry="14" transform="rotate(180 0 20)"/>
+              <ellipse cx="-14" cy="14" rx="6" ry="14" transform="rotate(-135 -14 14)"/>
+              <ellipse cx="-20" cy="0" rx="6" ry="14" transform="rotate(-90 -20 0)"/>
+              <ellipse cx="-14" cy="-14" rx="6" ry="14" transform="rotate(-45 -14 -14)"/>
+            </g>
+            <circle r="9" fill="url(#daisyCenter)"/>
+          </g>
+          <g transform="translate(345,368) rotate(-4) scale(.7)">
+            <g fill="url(#daisyPetal)">
+              <ellipse cx="0" cy="-20" rx="6" ry="14"/>
+              <ellipse cx="14" cy="-14" rx="6" ry="14" transform="rotate(45 14 -14)"/>
+              <ellipse cx="20" cy="0" rx="6" ry="14" transform="rotate(90 20 0)"/>
+              <ellipse cx="14" cy="14" rx="6" ry="14" transform="rotate(135 14 14)"/>
+              <ellipse cx="0" cy="20" rx="6" ry="14" transform="rotate(180 0 20)"/>
+              <ellipse cx="-14" cy="14" rx="6" ry="14" transform="rotate(-135 -14 14)"/>
+              <ellipse cx="-20" cy="0" rx="6" ry="14" transform="rotate(-90 -20 0)"/>
+              <ellipse cx="-14" cy="-14" rx="6" ry="14" transform="rotate(-45 -14 -14)"/>
+            </g>
+            <circle r="9" fill="url(#daisyCenter)"/>
+          </g>
+        </g>
+
+        <!-- ===== WHITE LILIES ===== -->
+        <g transform="translate(215,255) rotate(-14)">
+          <g>
+            <path d="M0,0 Q-30,-10 -34,-42 Q-10,-30 0,0" fill="url(#lily)"/>
+            <path d="M0,0 Q30,-10 34,-42 Q10,-30 0,0" fill="url(#lily)"/>
+            <path d="M0,0 Q-8,-38 0,-58 Q8,-38 0,0" fill="url(#lily)"/>
+            <path d="M0,0 Q-22,20 -10,44 Q4,20 0,0" fill="url(#lily)" opacity=".9"/>
+            <path d="M0,0 Q22,20 10,44 Q-4,20 0,0" fill="url(#lily)" opacity=".9"/>
+            <circle cx="0" cy="-4" r="5" fill="#d8a752"/>
+          </g>
+        </g>
+        <g transform="translate(455,248) rotate(16)">
+          <g>
+            <path d="M0,0 Q-30,-10 -34,-42 Q-10,-30 0,0" fill="url(#lily)"/>
+            <path d="M0,0 Q30,-10 34,-42 Q10,-30 0,0" fill="url(#lily)"/>
+            <path d="M0,0 Q-8,-38 0,-58 Q8,-38 0,0" fill="url(#lily)"/>
+            <path d="M0,0 Q-22,20 -10,44 Q4,20 0,0" fill="url(#lily)" opacity=".9"/>
+            <path d="M0,0 Q22,20 10,44 Q-4,20 0,0" fill="url(#lily)" opacity=".9"/>
+            <circle cx="0" cy="-4" r="5" fill="#d8a752"/>
+          </g>
+        </g>
+
+        <!-- ===== RED ROSES ===== -->
+        <g id="red-roses">
+          <g transform="translate(260,300)"><circle r="24" fill="url(#redRose)"/><circle r="15" fill="url(#redRose)" opacity=".9"/><circle r="7" fill="#7c1f2b"/></g>
+          <g transform="translate(410,300)"><circle r="24" fill="url(#redRose)"/><circle r="15" fill="url(#redRose)" opacity=".9"/><circle r="7" fill="#7c1f2b"/></g>
+          <g transform="translate(200,340)"><circle r="20" fill="url(#redRose)"/><circle r="12" fill="url(#redRose)" opacity=".9"/><circle r="6" fill="#7c1f2b"/></g>
+          <g transform="translate(470,330)"><circle r="20" fill="url(#redRose)"/><circle r="12" fill="url(#redRose)" opacity=".9"/><circle r="6" fill="#7c1f2b"/></g>
+        </g>
+
+        <!-- ===== WHITE ROSES ===== -->
+        <g id="white-roses">
+          <g transform="translate(300,340)"><circle r="20" fill="url(#whiteRose)"/><circle r="12" fill="url(#whiteRose)" opacity=".95"/><circle r="6" fill="#e3d2ad"/></g>
+          <g transform="translate(400,345)"><circle r="18" fill="url(#whiteRose)"/><circle r="11" fill="url(#whiteRose)" opacity=".95"/><circle r="5" fill="#e3d2ad"/></g>
+        </g>
+
+        <!-- ===== SUNFLOWERS (2 large, center) ===== -->
+        <g id="sunflowers">
+          <g transform="translate(330,255)">
+            <g id="petals-l">
+              <ellipse cx="0" cy="-46" rx="12" ry="26" fill="url(#sunPetal)"/>
+              <ellipse cx="32" cy="-38" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(35 32 -38)"/>
+              <ellipse cx="44" cy="-6" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(70 44 -6)"/>
+              <ellipse cx="44" cy="30" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(110 44 30)"/>
+              <ellipse cx="20" cy="52" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(145 20 52)"/>
+              <ellipse cx="-20" cy="52" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(-145 -20 52)"/>
+              <ellipse cx="-44" cy="30" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(-110 -44 30)"/>
+              <ellipse cx="-44" cy="-6" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(-70 -44 -6)"/>
+              <ellipse cx="-32" cy="-38" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(-35 -32 -38)"/>
+            </g>
+            <circle r="27" fill="url(#sunCenter)"/>
+          </g>
+          <g transform="translate(370,320) scale(.92)">
+            <g id="petals-r">
+              <ellipse cx="0" cy="-46" rx="12" ry="26" fill="url(#sunPetal)"/>
+              <ellipse cx="32" cy="-38" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(35 32 -38)"/>
+              <ellipse cx="44" cy="-6" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(70 44 -6)"/>
+              <ellipse cx="44" cy="30" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(110 44 30)"/>
+              <ellipse cx="20" cy="52" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(145 20 52)"/>
+              <ellipse cx="-20" cy="52" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(-145 -20 52)"/>
+              <ellipse cx="-44" cy="30" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(-110 -44 30)"/>
+              <ellipse cx="-44" cy="-6" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(-70 -44 -6)"/>
+              <ellipse cx="-32" cy="-38" rx="12" ry="26" fill="url(#sunPetal)" transform="rotate(-35 -32 -38)"/>
+            </g>
+            <circle r="27" fill="url(#sunCenter)"/>
+          </g>
+        </g>
+
+        <!-- ===== PEARLS ===== -->
+        <g id="pearls" fill="#fdf7ec">
+          <circle cx="255" cy="380" r="4"/><circle cx="405" cy="385" r="4"/>
+          <circle cx="330" cy="410" r="4.5"/><circle cx="290" cy="400" r="3.5"/><circle cx="375" cy="402" r="3.5"/>
+        </g>
+
+        <!-- ===== FAIRY LIGHTS ===== -->
+        <g id="fairy-lights" fill="#fff3c4">
+          <circle class="fl" cx="270" cy="290" r="3.5"/>
+          <circle class="fl" cx="360" cy="270" r="3.5"/>
+          <circle class="fl" cx="410" cy="320" r="3.5"/>
+          <circle class="fl" cx="300" cy="330" r="3.5"/>
+          <circle class="fl" cx="230" cy="310" r="3.5"/>
+          <circle class="fl" cx="450" cy="300" r="3.5"/>
+        </g>
+
+        <!-- ===== WRAPPING ===== -->
+        <path d="M 250,410 L 410,410 L 470,540 L 190,540 Z" fill="url(#wrapDark)"/>
+        <path d="M 260,400 L 400,400 L 450,530 L 210,530 Z" fill="url(#wrap)"/>
+        <path d="M 260,400 L 330,392 L 400,400 L 385,430 L 275,430 Z" fill="url(#wrap)"/>
+
+        <!-- ===== RIBBON ===== -->
+        <path d="M 260,440 Q 330,455 400,440" stroke="url(#ribbon)" stroke-width="14" fill="none"/>
+        <path d="M 300,440 L 280,480 L 305,470 L 320,495 L 330,460 Z" fill="url(#ribbon)"/>
+        <path d="M 360,440 L 380,480 L 355,470 L 340,495 L 330,460 Z" fill="url(#ribbon)"/>
+        <circle cx="330" cy="442" r="9" fill="#e8bc5f"/>
+      </svg>
+    </div>
+  </div>
+  <div class="petal-burst" id="petalBurst"></div>
+
+  <!-- balloons are injected here dynamically by JS (many, all unique) -->
+  <div id="balloonField" style="position:absolute; inset:0; overflow:hidden; z-index:7; pointer-events:none;"></div>
+
+  <div class="scroll-cue" id="cue2" style="opacity:0;"><span>keep scrolling</span><span class="chevron"></span></div>
+</section>
+
+<!-- ============ SCENE 3: PHOTO REVEAL ============ -->
+<section class="scene" id="scene3">
+  <div class="mini-hearts" id="miniHearts"></div>
+  <p class="eyebrow reveal">a moment, framed forever</p>
+  <div class="frame-wrap reveal">
+    <div class="rays"></div>
+    <div class="photo-frame">
+      <div class="photo-inner">
+        <img src="image/photo.jpg" alt="Our photo" onerror="this.parentElement.style.display='flex'; this.parentElement.style.alignItems='center'; this.parentElement.style.justifyContent='center'; this.style.display='none'; this.parentElement.innerHTML+='<span style=\'color:#c9b48a;font-family:Cormorant Garamond,serif;font-size:1rem;text-align:center;padding:20px;\'>place photo.jpg beside this file</span>';">
+      </div>
+    </div>
+  </div>
+  <p class="photo-caption reveal">For the most beautiful girl in my life.</p>
+  <div class="scroll-cue"><span>continue</span><span class="chevron"></span></div>
+</section>
+
+<!-- ============ SCENE 4: VINTAGE LETTER ============ -->
+<section class="scene" id="scene4">
+  <p class="eyebrow reveal" style="margin-bottom:3vh;">Apology</p>
+  <div class="desk">
+    <div class="envelope reveal">
+      <div class="seal-mini" id="sealMini" title="Click to open the letter"></div>
+      <svg class="feather" viewBox="0 0 100 200"><path d="M50,10 C20,50 10,120 40,190 C42,150 55,100 70,60 C80,35 68,15 50,10 Z" fill="#e8dcc4" stroke="#b6a475" stroke-width="1"/><line x1="50" y1="15" x2="42" y2="185" stroke="#b6a475" stroke-width="1.5"/></svg>
+      <svg class="dried-flower" viewBox="0 0 60 60"><g fill="none" stroke="#c9a06b" stroke-width="2"><circle cx="30" cy="30" r="6" fill="#caa06c"/><path d="M30,24 Q22,10 14,14"/><path d="M30,24 Q38,10 46,14"/><path d="M30,36 Q20,48 10,44"/><path d="M30,36 Q40,48 50,44"/></g></svg>
+    </div>
+
+    <div class="letter-paper folded" id="letterPaper">
+      <div class="candle-glow"></div>
+      <div class="coffee-stain one"></div>
+      <div class="coffee-stain two"></div>
+      <div class="gold-border"></div>
+      <svg class="corner tl" viewBox="0 0 60 60"><path d="M2,2 Q20,2 20,20 M2,2 Q2,20 20,20 M2,10 Q2,2 10,2" fill="none" stroke="#b4823a" stroke-width="1.4"/><circle cx="14" cy="14" r="2" fill="#b4823a"/></svg>
+      <svg class="corner tr" viewBox="0 0 60 60"><path d="M2,2 Q20,2 20,20 M2,2 Q2,20 20,20 M2,10 Q2,2 10,2" fill="none" stroke="#b4823a" stroke-width="1.4"/><circle cx="14" cy="14" r="2" fill="#b4823a"/></svg>
+      <svg class="corner bl" viewBox="0 0 60 60"><path d="M2,2 Q20,2 20,20 M2,2 Q2,20 20,20 M2,10 Q2,2 10,2" fill="none" stroke="#b4823a" stroke-width="1.4"/><circle cx="14" cy="14" r="2" fill="#b4823a"/></svg>
+      <svg class="corner br" viewBox="0 0 60 60"><path d="M2,2 Q20,2 20,20 M2,2 Q2,20 20,20 M2,10 Q2,2 10,2" fill="none" stroke="#b4823a" stroke-width="1.4"/><circle cx="14" cy="14" r="2" fill="#b4823a"/></svg>
+      <svg class="seal-open" viewBox="0 0 60 60"><path d="M30,4 C40,4 46,14 44,22 C50,26 50,36 42,40 C44,48 36,54 30,50 C24,54 16,48 18,40 C10,36 10,26 16,22 C14,14 20,4 30,4 Z" fill="#8f2129"/><path d="M18,26 Q30,18 42,26 Q34,30 30,36 Q26,30 18,26 Z" fill="#6e161c"/></svg>
+
+      <div class="letter-heading">For You</div>
+      <div class="letter-lines">
+        <p>My Sanuu, ❤️</p>
+        <p>I'm really sorry sanuuu</p>
+        <p>Maile jani jani nidauna khojeko thina sanii . Sachaiii nai thina.</p>
+        <p>Hijo ra asti basda basdai, thakai le garda tha nai napai nidaye.</p>
+        <p>Maile nidauxu  vanera ni sochekoni thina sanuu , tara kasari aafai basda basdaii kasari nidaye thanai paina sanuuu.</p>
+        <p>Tma bujxu saniii hajur lai naramro lageko xa tara mero intention kaile pani bacha lai narmaro lagane bacha vanda aagadi jani jani nidaunne thena hudaina sanuuu,</p>
+        <p>mero bachaa lai maile dheraii  nai narmaro lagaesake  sani 2 din dekhi.</p>
+        <p>Tesko lagi ekdamaii sorryy mero  saniiii.</p>
+        <p>Please believe me, maile nindra  lai sanii hajur vanda mathi kahile ni rakheko xaina.</p>
+        <p>hajur sanga kura garnu nai mero din ko favorite part ho.</p>
+        <p>hajurr message, timro voice, timro sano sano kura haru... yo sab kura malai dherai important xa  sanuu.</p>
+        <p>Ma hajurr lai  hurt garna kaile pani chahanna.</p>
+        
+        
+        <p>I know bachaa  sorry le matra sab thik hudaina.</p>
+        
+        <p> ma promise garxu, aba dekhi yesari bacha lai hurt gardina sanoooo dherai maya garxu mero bacha laii,</p>
+        <p>hajurrlai dikka lagaune kaam ma gardna bacha .</p>
+        <p>I'm really really sorry, Sanuu.</p>
+        <p class="signoff">I love you... always. ❤️</p>
+        <p>please Forgive me bachaa</p>
+
+      </div>
+    </div>
+  </div>
+  <div class="scroll-cue"><span>continue</span><span class="chevron"></span></div>
+</section>
+
+<!-- ============ SCENE 5: ENDING ============ -->
+<section class="scene" id="scene5">
+  <canvas class="bg-canvas" id="endingCanvas"></canvas>
+  <div class="ending-text">
+    <p class="ending-line1 reveal">I&rsquo;ll always choose you.</p>
+    <p class="ending-line2 reveal">&#10084;&#65039; Forever &amp; Always &#10084;&#65039;</p>
+  </div>
+  <footer>made with a whole heart</footer>
+</section>
+
+<script>
+(function(){
+"use strict";
+
+const rand = (min,max)=>Math.random()*(max-min)+min;
+const pick = (arr)=>arr[Math.floor(Math.random()*arr.length)];
+function el(tag, cls, parent){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(parent) parent.appendChild(e);
+  return e;
+}
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const introOverlay = document.getElementById('intro-overlay');
+const introCanvas = document.getElementById('introCanvas');
+const lines = document.querySelectorAll('.intro-line');
+const skipBtn = document.getElementById('skip-intro');
+
+function fitCanvas(canvas){
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = canvas.offsetHeight * devicePixelRatio;
+}
+
+function startParticleField(canvas, opts){
+  fitCanvas(canvas);
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const count = opts.count || 60;
+  for(let i=0;i<count;i++){
+    particles.push({
+      x: rand(0, canvas.width),
+      y: rand(0, canvas.height),
+      r: rand(opts.minR||0.6, opts.maxR||2.2),
+      speedY: rand(-0.15,-0.5),
+      speedX: rand(-0.15,0.15),
+      alpha: rand(0.2,0.9),
+      twinkle: rand(0.005,0.02)
+    });
+  }
+  let raf;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{
+      p.y += p.speedY;
+      p.x += p.speedX;
+      p.alpha += (Math.random()-0.5)*p.twinkle;
+      p.alpha = Math.max(0.1, Math.min(1, p.alpha));
+      if(p.y < -10){ p.y = canvas.height+10; p.x = rand(0,canvas.width); }
+      if(p.x < -10) p.x = canvas.width+10;
+      if(p.x > canvas.width+10) p.x = -10;
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(243,205,130,${p.alpha})`;
+      ctx.shadowColor = 'rgba(243,205,130,0.8)';
+      ctx.shadowBlur = p.r*4;
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    raf = requestAnimationFrame(draw);
+  }
+  if(!reduceMotion) draw(); else ctx.clearRect(0,0,canvas.width,canvas.height);
+  window.addEventListener('resize', ()=>fitCanvas(canvas));
+  return ()=>cancelAnimationFrame(raf);
+}
+startParticleField(introCanvas, {count:70, minR:0.6, maxR:2.4});
+startParticleField(document.getElementById('sparkleCanvas'), {count:36, minR:0.5, maxR:1.8});
+
+let introSeq;
+function playIntro(){
+  let i = 0;
+  function step(){
+    lines.forEach(l=>l.classList.remove('active'));
+    if(i >= lines.length){
+      endIntro();
+      return;
+    }
+    lines[i].classList.add('active');
+    introSeq = setTimeout(()=>{ i++; step(); }, 3600);
+  }
+  step();
+}
+function endIntro(){
+  introOverlay.classList.add('hide');
+  setTimeout(()=>{ introOverlay.style.display='none'; }, 1900);
+}
+skipBtn.addEventListener('click', ()=>{ clearTimeout(introSeq); endIntro(); });
+if(reduceMotion){ endIntro(); } else { playIntro(); }
+
+const revealEls = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      entry.target.classList.add('in-view');
+    }
+  });
+}, {threshold:0.2});
+revealEls.forEach(e=>io.observe(e));
+
+const bouquetGroup = document.getElementById('bouquet-group');
+const petalBurst = document.getElementById('petalBurst');
+const cue2 = document.getElementById('cue2');
+let accepted = false;
+
+function spawnFallingPetal(container, count){
+  for(let i=0;i<count;i++){
+    setTimeout(()=>{
+      const p = el('div','petal',container);
+      const startX = rand(10,90);
+      p.style.left = startX+'%';
+      p.style.top = '-5%';
+      p.style.background = Math.random()>0.5
+        ? 'linear-gradient(135deg,#c9445a,#7c1f2b)'
+        : 'linear-gradient(135deg,#f4ecd8,#d8c8a2)';
+      const duration = rand(4,7);
+      const drift = rand(-80,80);
+      p.animate([
+        {transform:`translate(0,0) rotate(0deg)`, opacity:0},
+        {transform:`translate(${drift*0.3}px, 40vh) rotate(180deg)`, opacity:1, offset:.5},
+        {transform:`translate(${drift}px, 90vh) rotate(360deg)`, opacity:0}
+      ], {duration:duration*1000, easing:'ease-in'});
+      setTimeout(()=>p.remove(), duration*1000+100);
+    }, i*350);
+  }
+}
+if(!reduceMotion) setInterval(()=>spawnFallingPetal(petalBurst,1), 900);
+
+function burstPetals(container, count){
+  for(let i=0;i<count;i++){
+    const p = el('div','petal',container);
+    const startX = 45 + rand(-10,10);
+    const startY = 55 + rand(-10,10);
+    p.style.left = startX+'%';
+    p.style.top = startY+'%';
+    p.style.background = Math.random()>0.4
+      ? 'linear-gradient(135deg,#c9445a,#7c1f2b)'
+      : 'linear-gradient(135deg,#f4ecd8,#d8c8a2)';
+    const angle = rand(0,360)*Math.PI/180;
+    const dist = rand(150,420);
+    const dx = Math.cos(angle)*dist;
+    const dy = Math.sin(angle)*dist - 100;
+    p.animate([
+      {transform:'translate(0,0) rotate(0deg) scale(0.6)', opacity:1},
+      {transform:`translate(${dx}px, ${dy}px) rotate(${rand(180,720)}deg) scale(1)`, opacity:0}
+    ], {duration:rand(1400,2200), easing:'cubic-bezier(.2,.7,.3,1)'});
+    setTimeout(()=>p.remove(), 2300);
+  }
+}
+
+function acceptBouquet(){
+  if(accepted) return;
+  accepted = true;
+  bouquetGroup.classList.add('accepted');
+  document.querySelector('.hand-hint').style.opacity = '0';
+  burstPetals(petalBurst, 40);
+  setTimeout(()=>burstPetals(petalBurst, 24), 350);
+  cue2.style.transition = 'opacity 1.2s ease';
+  cue2.style.opacity = '1';
+}
+bouquetGroup.addEventListener('click', acceptBouquet);
+bouquetGroup.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') acceptBouquet(); });
+
+document.querySelectorAll('#fairy-lights .fl').forEach(light=>{
+  const delay = rand(0,2);
+  const dur = rand(1.4,2.6);
+  light.style.transformOrigin = 'center';
+  light.animate([
+    {opacity:0.3, r:2.5},
+    {opacity:1},
+    {opacity:0.3}
+  ], {duration:dur*1000, delay:delay*1000, iterations:Infinity, easing:'ease-in-out'});
+});
+
+/* ==================================================================
+   MANY SORRY BALLOONS — generated dynamically so every one is unique
+   (color, size, speed, sway, rotation) instead of only a few fixed ones
+   ================================================================== */
+(function buildBalloons(){
+  const field = document.getElementById('balloonField');
+  const balloonPalettes = [
+    ['#ff8a94','#8f1f2c'], // deep red
+    ['#f3c98a','#a9762f'], // rose / champagne gold
+    ['#ffe9c2','#c9922f'], // champagne gold
+    ['#ffffff','#cbb89e'], // soft white
+    ['#f3b4c4','#a8283e'], // pastel pink
+  ];
+  const totalBalloons = 32; // "dherai" — many balloons
+
+  for(let i=0;i<totalBalloons;i++){
+    const [c1,c2] = pick(balloonPalettes);
+    const size = rand(60,130);
+    const left = rand(-2,96);
+    const fallDuration = rand(11,22);
+    const fallDelay = rand(0,10);
+    const swayDuration = rand(2.6,5);
+    const swayDistance = rand(16,46);
+    const wrap = document.createElement('div');
+    wrap.className = 'sorry-balloon';
+    wrap.style.left = left+'%';
+    wrap.style.width = size+'px';
+
+    wrap.innerHTML = `
+      <svg viewBox="0 0 120 190" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="bln${i}" cx="35%" cy="28%" r="75%">
+            <stop offset="0%" stop-color="${c1}"/>
+            <stop offset="55%" stop-color="${c1}"/>
+            <stop offset="100%" stop-color="${c2}"/>
+          </radialGradient>
+        </defs>
+        <line x1="60" y1="128" x2="60" y2="178" stroke="#c9a24f" stroke-width="1.5"/>
+        <ellipse cx="60" cy="72" rx="52" ry="62" fill="url(#bln${i})"/>
+        <ellipse cx="42" cy="46" rx="12" ry="20" fill="#ffffff" opacity=".28"/>
+        <path d="M50,130 L70,130 L60,145 Z" fill="${c2}"/>
+        <text x="60" y="80" text-anchor="middle" font-family="'Playfair Display',serif" font-style="italic" font-weight="600" font-size="${rand(18,26)}" fill="#fff7ec">Sorry</text>
+      </svg>
+    `;
+    field.appendChild(wrap);
+
+    // give every balloon its own fall + sway keyframes so nothing repeats identically
+    const styleTag = document.createElement('style');
+    const fallName = `fall${i}`;
+    const swayName = `sway${i}`;
+    const endRotate = rand(-14,14);
+    styleTag.textContent = `
+      @keyframes ${fallName}{
+        0%{ transform:translateY(0) rotate(0deg); opacity:0; }
+        6%{ opacity:1; }
+        92%{ opacity:1; }
+        100%{ transform:translateY(135vh) rotate(${endRotate}deg); opacity:0; }
+      }
+      @keyframes ${swayName}{
+        0%,100%{ margin-left:0px; }
+        50%{ margin-left:${swayDistance}px; }
+      }
+    `;
+    document.head.appendChild(styleTag);
+    wrap.style.animation = reduceMotion
+      ? 'none'
+      : `${fallName} ${fallDuration}s linear ${fallDelay}s infinite, ${swayName} ${swayDuration}s ease-in-out infinite`;
+  }
+
+  // golden sparkles drifting among the balloons
+  for(let i=0;i<20;i++){
+    const s = document.createElement('div');
+    s.style.position='absolute';
+    const size = rand(6,16);
+    s.style.width = size+'px'; s.style.height = size+'px';
+    s.style.left = rand(0,100)+'%';
+    s.style.top = rand(0,100)+'%';
+    s.style.borderRadius='50%';
+    s.style.background = 'radial-gradient(circle, #fff7e0 0%, rgba(255,247,224,0) 70%)';
+    s.style.animation = `twinkleSpark ${rand(2,4.5)}s ease-in-out ${rand(0,3)}s infinite`;
+    field.appendChild(s);
+  }
+  const twStyle = document.createElement('style');
+  twStyle.textContent = `@keyframes twinkleSpark{0%,100%{opacity:0.15;transform:scale(0.7);}50%{opacity:0.9;transform:scale(1.15);}}`;
+  document.head.appendChild(twStyle);
+})();
+
+/* ==================================================================
+   ENVELOPE SEAL — click the red wax seal to unfold the letter
+   ================================================================== */
+(function letterOpen(){
+  const seal = document.getElementById('sealMini');
+  const envelope = document.querySelector('.envelope');
+  const letter = document.getElementById('letterPaper');
+  let opened = false;
+
+  function sparkBurst(){
+    const rect = envelope.getBoundingClientRect();
+    for(let i=0;i<18;i++){
+      const s = el('div', null, document.body);
+      s.style.position='fixed';
+      s.style.left = (rect.left + rect.width/2) + 'px';
+      s.style.top = (rect.top + rect.height/2) + 'px';
+      const size = rand(4,9);
+      s.style.width = size+'px'; s.style.height = size+'px';
+      s.style.borderRadius='50%';
+      s.style.background = 'radial-gradient(circle, #fff6da, rgba(255,246,218,0))';
+      s.style.pointerEvents='none';
+      s.style.zIndex = 999;
+      const angle = rand(0,Math.PI*2);
+      const dist = rand(40,140);
+      s.animate([
+        {transform:'translate(-50%,-50%) scale(.4)', opacity:1},
+        {transform:`translate(${Math.cos(angle)*dist - 50}%, ${Math.sin(angle)*dist - 50}%) scale(1)`, opacity:0}
+      ], {duration:rand(700,1100), easing:'cubic-bezier(.22,.61,.36,1)'});
+      setTimeout(()=>s.remove(), 1200);
+    }
+  }
+
+  function openLetter(){
+    if(opened) return;
+    opened = true;
+    seal.classList.add('broken');
+    letter.classList.remove('folded');
+    letter.classList.add('open');
+    if(!reduceMotion) sparkBurst();
+  }
+  seal.addEventListener('click', (e)=>{ e.stopPropagation(); openLetter(); });
+  envelope.addEventListener('click', openLetter);
+})();
+
+const miniHearts = document.getElementById('miniHearts');
+const scene3 = document.getElementById('scene3');
+let heartsStarted = false;
+const io3 = new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting && !heartsStarted && !reduceMotion){
+      heartsStarted = true;
+      setInterval(spawnHeart, 700);
+    }
+  });
+},{threshold:0.3});
+io3.observe(scene3);
+
+function spawnHeart(){
+  const h = el('div', null, miniHearts);
+  h.textContent = Math.random()>0.5 ? '\u2661' : '\u2665';
+  h.style.position='absolute';
+  h.style.left = rand(10,90)+'%';
+  h.style.bottom = '0%';
+  h.style.color = 'rgba(216,167,82,0.85)';
+  h.style.fontSize = rand(12,22)+'px';
+  h.style.textShadow = '0 0 8px rgba(216,167,82,.6)';
+  const dur = rand(4,6.5);
+  h.animate([
+    {transform:'translateY(0) scale(0.8)', opacity:0},
+    {transform:`translateY(-${rand(40,60)}vh) scale(1)`, opacity:1, offset:.6},
+    {transform:`translateY(-${rand(65,85)}vh) scale(0.9)`, opacity:0}
+  ],{duration:dur*1000, easing:'ease-out'});
+  setTimeout(()=>h.remove(), dur*1000+100);
+}
+
+const endingCanvas = document.getElementById('endingCanvas');
+const scene5 = document.getElementById('scene5');
+
+function buildStars(canvas){
+  fitCanvas(canvas);
+  const ctx = canvas.getContext('2d');
+  const stars = [];
+  for(let i=0;i<120;i++){
+    stars.push({x:rand(0,canvas.width), y:rand(0,canvas.height*0.7), r:rand(0.5,1.6), phase:rand(0,Math.PI*2)});
+  }
+  let t=0, raf;
+  function draw(){
+    t += 0.02;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    stars.forEach(s=>{
+      const a = 0.35 + Math.abs(Math.sin(t+s.phase))*0.5;
+      ctx.beginPath();
+      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    raf = requestAnimationFrame(draw);
+  }
+  if(!reduceMotion) draw(); else { ctx.clearRect(0,0,canvas.width,canvas.height); }
+  window.addEventListener('resize', ()=>fitCanvas(canvas));
+}
+buildStars(endingCanvas);
+
+let endingStarted = false;
+const endingLayer = el('div', null, scene5);
+endingLayer.style.position='absolute'; endingLayer.style.inset='0'; endingLayer.style.pointerEvents='none'; endingLayer.style.zIndex='2';
+
+function spawnFirefly(){
+  const f = el('div','firefly', endingLayer);
+  let x = rand(5,95), y = rand(20,90);
+  f.style.left = x+'%'; f.style.top = y+'%';
+  function wander(){
+    x += rand(-6,6); y += rand(-6,6);
+    x = Math.max(2,Math.min(98,x)); y = Math.max(10,Math.min(95,y));
+    f.animate([{left:f.style.left, top:f.style.top},{left:x+'%', top:y+'%'}],{duration:rand(2500,4000), fill:'forwards', easing:'ease-in-out'});
+    f.style.left = x+'%'; f.style.top = y+'%';
+  }
+  const iv = setInterval(wander, 3200);
+  f.animate([{opacity:.2},{opacity:1},{opacity:.3}],{duration:rand(1800,3000), iterations:Infinity, easing:'ease-in-out'});
+  f.dataset.iv = iv;
+}
+
+const io5 = new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting && !endingStarted && !reduceMotion){
+      endingStarted = true;
+      for(let i=0;i<14;i++) spawnFirefly();
+      setInterval(()=>spawnFallingPetal(endingLayer,1), 1100);
+    }
+  });
+},{threshold:0.25});
+io5.observe(scene5);
+
+})();
+</script>
+</body>
+</html>
